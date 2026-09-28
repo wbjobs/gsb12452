@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>屏幕能力控制台 · 全屏 / 方向 / 画中画</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>屏幕能力控制台</h1>
+    <div class="env-badges">
+      <span id="badge-secure" class="badge" title="是否处于安全上下文（HTTPS 或 localhost）">安全上下文：检测中</span>
+      <span id="badge-gesture" class="badge" title="浏览器认为当前是否处于用户激活状态（短时激活）">用户交互：否</span>
+      <span id="badge-online" class="badge">在线状态：检测中</span>
+    </div>
+  </header>
+
+  <main class="grid">
+
+    <!-- 全屏 -->
+    <section class="card" id="card-fullscreen">
+      <h2>🖥️ 全屏 Fullscreen API</h2>
+      <div class="status-line"><span class="dot" id="fs-dot"></span><span id="fs-state">检测中…</span></div>
+      <dl class="meta">
+        <dt>权限状态（Permissions API）</dt><dd id="fs-perm">检测中…</dd>
+        <dt>可用条件</dt><dd id="fs-cond">检测中…</dd>
+        <dt>最近失败原因</dt><dd id="fs-error" class="err">无</dd>
+        <dt>降级方案</dt><dd id="fs-fallback">检测中…</dd>
+      </dl>
+      <div class="actions">
+        <button type="button" data-action="fs-enter">进入全屏</button>
+        <button type="button" data-action="fs-exit">退出全屏</button>
+      </div>
+    </section>
+
+    <!-- 屏幕方向 -->
+    <section class="card" id="card-orientation">
+      <h2>🔄 屏幕方向 Screen Orientation</h2>
+      <div class="status-line"><span class="dot" id="ori-dot"></span><span id="ori-state">检测中…</span></div>
+      <dl class="meta">
+        <dt>权限状态（Permissions API）</dt><dd id="ori-perm">检测中…</dd>
+        <dt>当前方向</dt><dd id="ori-current">检测中…</dd>
+        <dt>可用条件</dt><dd id="ori-cond">检测中…</dd>
+        <dt>最近失败原因</dt><dd id="ori-error" class="err">无</dd>
+        <dt>降级方案</dt><dd id="ori-fallback">检测中…</dd>
+      </dl>
+      <div class="actions">
+        <button type="button" data-action="ori-lock-landscape">锁定横屏</button>
+        <button type="button" data-action="ori-lock-portrait">锁定竖屏</button>
+        <button type="button" data-action="ori-unlock">解除锁定</button>
+      </div>
+    </section>
+
+    <!-- 画中画 -->
+    <section class="card" id="card-pip">
+      <h2>🖼️ 画中画 Picture-in-Picture</h2>
+      <div class="status-line"><span class="dot" id="pip-dot"></span><span id="pip-state">检测中…</span></div>
+      <dl class="meta">
+        <dt>权限状态（Permissions API）</dt><dd id="pip-perm">检测中…</dd>
+        <dt>视频来源</dt><dd id="pip-source">未准备</dd>
+        <dt>可用条件</dt><dd id="pip-cond">检测中…</dd>
+        <dt>最近失败原因</dt><dd id="pip-error" class="err">无</dd>
+        <dt>降级方案</dt><dd id="pip-fallback">检测中…</dd>
+      </dl>
+      <video id="pip-video" playsinline muted></video>
+      <div class="actions">
+        <button type="button" data-action="pip-prepare">1. 准备演示视频</button>
+        <button type="button" data-action="pip-enter">2. 进入画中画</button>
+        <button type="button" data-action="pip-exit">3. 退出画中画</button>
+      </div>
+    </section>
+
+    <!-- 健壮性测试 -->
+    <section class="card" id="card-robustness">
+      <h2>🛡️ 异常与降级测试</h2>
+      <p class="hint">下列调用会在<b>无用户交互</b>的上下文（setTimeout 回调）中发起，用于验证“用户未交互时调用不能崩”。每次调用都会被捕获并写入历史。</p>
+      <div class="actions">
+        <button type="button" data-action="test-fs">无交互尝试：全屏</button>
+        <button type="button" data-action="test-ori">无交互尝试：锁横屏</button>
+        <button type="button" data-action="test-pip">无交互尝试：画中画</button>
+        <button type="button" data-action="test-all">无交互尝试：全部</button>
+      </div>
+      <p class="hint">其他边界：权限被拒会在调用结果中体现；不支持 / 非安全上下文请看顶部与各卡片状态。</p>
+    </section>
+
+    <!-- 操作历史 -->
+    <section class="card card-wide" id="card-history">
+      <h2>📜 操作历史（IndexedDB 持久化）</h2>
+      <div class="actions">
+        <button type="button" data-action="history-refresh">刷新</button>
+        <button type="button" data-action="history-clear" class="danger">清空历史</button>
+        <span id="history-count" class="hint"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>时间</th><th>能力</th><th>操作</th><th>结果</th><th>详情 / 失败原因</th></tr>
+          </thead>
+          <tbody id="history-body">
+            <tr><td colspan="5" class="hint">加载中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- 降级：方向旋转提示遮罩 -->
+  <div id="rotate-overlay" class="overlay" hidden>
+    <div class="overlay-box">
+      <div class="rotate-icon" id="rotate-icon">📱↪️</div>
+      <p id="rotate-text">请将设备旋转到横屏</p>
+      <button type="button" id="rotate-dismiss">我知道了</button>
+    </div>
+  </div>
+
+  <!-- 降级：普通弹窗（画中画不支持 / 被弹窗拦截时使用页面内弹窗） -->
+  <div id="fallback-modal" class="overlay" hidden>
+    <div class="overlay-box">
+      <h3 id="modal-title">提示</h3>
+      <p id="modal-body"></p>
+      <button type="button" id="modal-close">关闭</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
