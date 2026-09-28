@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>屏幕能力控制台 · 全屏 / 方向锁定 / 画中画</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>屏幕能力控制台</h1>
+    <p class="subtitle">Fullscreen · Screen Orientation · Picture-in-Picture（原生 API，无框架）</p>
+  </header>
+
+  <!-- 非安全上下文警告 -->
+  <div id="insecureBanner" class="banner banner-danger" hidden>
+    <strong>非安全上下文：</strong>
+    当前页面不是 HTTPS / localhost，浏览器已禁用全屏、方向锁定与画中画能力。
+    请通过 <code>https://</code> 或 <code>http://localhost</code> 访问。下方各能力会展示降级方案。
+  </div>
+
+  <main class="layout">
+    <!-- 左侧：能力面板 -->
+    <section class="panel panel-stage">
+      <h2>演示画面（全屏 / 画中画源）</h2>
+      <div id="stage" class="stage">
+        <canvas id="pipCanvas" width="480" height="270" aria-label="画中画演示动画"></canvas>
+        <video id="pipVideo" muted playsinline></video>
+        <div class="stage-overlay">
+          <p id="stageHint" class="stage-hint">点击右侧按钮控制此画面</p>
+        </div>
+      </div>
+      <p class="micro">
+        动画由本地 Canvas 实时生成并通过 <code>captureStream()</code> 提供给 video，
+        无需任何网络资源。
+      </p>
+
+      <div class="env-card">
+        <h3>环境状态</h3>
+        <dl class="kv" id="envStatus"></dl>
+      </div>
+
+      <button id="noGestureDemo" class="btn btn-ghost btn-block" type="button">
+        模拟「用户未交互」场景（6 秒后尝试调用，期间请勿点击）
+      </button>
+    </section>
+
+    <!-- 右侧：三个能力卡片 -->
+    <section class="panel">
+      <h2>能力控制</h2>
+
+      <!-- 全屏 -->
+      <article class="cap-card" id="fullscreenCard">
+        <header class="cap-head">
+          <h3>① 全屏</h3>
+          <span class="pill" id="fsPermPill">权限：检测中…</span>
+        </header>
+        <dl class="kv">
+          <div><dt>当前状态</dt><dd id="fsState">—</dd></div>
+          <div><dt>触发条件</dt><dd>需用户手势 + 安全上下文；部分浏览器受 Permissions-Policy 限制</dd></div>
+          <div><dt>失败原因</dt><dd id="fsReason" class="reason">—</dd></div>
+        </dl>
+        <div class="btn-row">
+          <button id="fsToggle" class="btn btn-primary" type="button">申请全屏</button>
+        </div>
+        <p class="fallback" id="fsFallback" hidden>
+          <strong>降级：</strong>当前环境无法进入浏览器全屏，可让用户使用设备/浏览器自带的全屏按钮，或按
+          <kbd>F11</kbd>（桌面）进入窗口全屏。
+        </p>
+      </article>
+
+      <!-- 方向锁定 -->
+      <article class="cap-card" id="orientationCard">
+        <header class="cap-head">
+          <h3>② 屏幕方向锁定</h3>
+          <span class="pill" id="oriPermPill">权限：检测中…</span>
+        </header>
+        <dl class="kv">
+          <div><dt>当前方向</dt><dd id="oriState">—</dd></div>
+          <div><dt>锁定状态</dt><dd id="oriLockState">—</dd></div>
+          <div>
+            <dt>触发条件</dt>
+            <dd>需用户手势；移动端通常要求先进入全屏；不支持时降级为手动旋转提示</dd>
+          </div>
+          <div><dt>失败原因</dt><dd id="oriReason" class="reason">—</dd></div>
+        </dl>
+        <div class="btn-row">
+          <button id="oriLockLandscape" class="btn btn-primary" type="button">锁定横屏</button>
+          <button id="oriLockPortrait" class="btn" type="button">锁定竖屏</button>
+          <button id="oriUnlock" class="btn" type="button">解除锁定</button>
+        </div>
+        <p class="fallback" id="oriFallback" hidden>
+          <strong>降级：</strong>系统方向锁定不可用，请按下方提示手动旋转设备，并关闭系统的“自动旋转锁定”。
+        </p>
+      </article>
+
+      <!-- 画中画 -->
+      <article class="cap-card" id="pipCard">
+        <header class="cap-head">
+          <h3>③ 画中画（Picture-in-Picture）</h3>
+          <span class="pill" id="pipPermPill">权限：检测中…</span>
+        </header>
+        <dl class="kv">
+          <div><dt>当前状态</dt><dd id="pipState">—</dd></div>
+          <div>
+            <dt>触发条件</dt>
+            <dd>需用户手势 + 可播放的视频源；Safari iOS 14+ 部分支持，受 Permissions-Policy 限制</dd>
+          </div>
+          <div><dt>失败原因</dt><dd id="pipReason" class="reason">—</dd></div>
+        </dl>
+        <div class="btn-row">
+          <button id="pipToggle" class="btn btn-primary" type="button">申请画中画</button>
+          <button id="pipPopupFallback" class="btn" type="button">用普通弹窗替代</button>
+        </div>
+        <p class="fallback" id="pipFallback" hidden>
+          <strong>降级：</strong>画中画不可用，已（或可）改用独立小窗播放；若弹窗被拦截，请允许本站弹窗。
+        </p>
+      </article>
+    </section>
+
+    <!-- 历史 -->
+    <section class="panel panel-history">
+      <header class="cap-head">
+        <h2>操作历史</h2>
+        <div class="btn-row">
+          <span class="micro" id="historyStorage">存储：检测中…</span>
+          <button id="historyClear" class="btn btn-ghost" type="button">清空</button>
+        </div>
+      </header>
+      <p class="micro" id="historyGestureNote">
+        提示：以下按钮均在真实点击事件中调用，属于“用户激活”状态。
+      </p>
+      <ul id="historyList" class="history-list"></ul>
+    </section>
+  </main>
+
+  <!-- 手动旋转降级提示 -->
+  <div id="rotateModal" class="modal" hidden>
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="rotateTitle">
+      <div class="rotate-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="56" height="56">
+          <rect x="14" y="6" width="20" height="36" rx="4" fill="none" stroke="currentColor" stroke-width="2.5" />
+          <path d="M10 20 a14 14 0 0 1 12 -10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M22 8 l0 6 l-6 -1.5z" fill="currentColor"/>
+        </svg>
+      </div>
+      <h3 id="rotateTitle">请手动旋转设备</h3>
+      <p id="rotateDesc" class="modal-desc">
+        当前浏览器不支持系统级方向锁定。请将设备旋转至
+        <strong id="rotateTarget">横屏</strong>方向。
+      </p>
+      <ol class="rotate-steps">
+        <li>关闭设备系统设置中的“竖屏锁定 / 自动旋转锁定”。</li>
+        <li>手动转动设备到目标方向。</li>
+        <li>需要恢复时重新打开系统方向锁定即可。</li>
+      </ol>
+      <button class="btn btn-primary btn-block" type="button" data-close="1">我知道了</button>
+    </div>
+  </div>
+
+  <div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
